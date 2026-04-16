@@ -22,8 +22,8 @@ class Cell:
         self.value = value
         self.candidates: set[int] = set(range(1,10)) if value is None else set()
         self.is_given = value is not None
-        self.units: Optional[list[Unit]] = None
-        self.peers: Optional[set[Cell]] = None
+        self.units: list[Unit] = None #type: ignore
+        self.peers: set[Cell] = None #type: ignore
 
     @property
     def box(self) -> int:
@@ -34,12 +34,13 @@ class Cell:
 
     def is_solved(self) -> bool:
         return (self.value is not None)
-
+    
+    @property
     def candidate_count(self) -> int:
         return len(self.candidates)
 
     def only_candidate(self) -> Union[int, None]:
-        if self.candidate_count() == 1:
+        if self.candidate_count == 1:
             digit = next(iter(self.candidates))
             return digit
         return
@@ -73,6 +74,7 @@ class Unit:
         self.type = unit_type
         self.index = index
         self.cells = cells
+        self.counts = self._unit_candidate_counts()
 
     @property
     def unsolved_cells(self) -> list[Cell]:
@@ -96,6 +98,9 @@ class Unit:
             cell for cell in self.unsolved_cells
             if d in cell.candidates
         ]
+    
+    def contains_cell(self, cell: Cell) -> bool:
+        return cell in self.cells
 
     def candidate_locations(self) -> dict[int, list[Cell]]:
         candidate_map = {}
@@ -103,6 +108,28 @@ class Unit:
             candidates = self.cells_with_candidates(digit)
             candidate_map[digit] = candidates
         return candidate_map
+    
+    def _unit_candidate_counts(self) -> dict[int, int]:
+        counts: dict[int, int] = {i: 0 for i in range(1,10)}
+        for cell in self.cells:
+            if cell.candidates == set():
+                continue
+            for digit in cell.candidates:
+                counts[digit] += 1
+        return counts
+    
+    def candidate_count_inc(self, digit) -> None:
+        self.counts[digit] += 1
+
+    def candidate_count_dec(self, digit) -> None:
+        self.counts[digit] -= 1
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Unit):
+            return False
+        if (self.type == other.type) and (self.index == other.index):
+            return True
+        return False
 
 
 class Board:
@@ -113,6 +140,24 @@ class Board:
         self.columns: list[Unit] = self._build_columns()
         self.boxes: list[Unit] = self._build_boxes()
 
+        self.strong_links: dict[int, set[frozenset[Cell]]]
+        self.strong_adj: dict[int, dict[Cell, set[Cell]]]
+    
+    @property
+    def bivalues(self) -> set[Cell]:
+        """Returns set of cells with only two candidates"""
+        return set(
+            cell for _cell in self.cells 
+            for cell in _cell 
+            if cell.candidate_count == 2
+        )
+    
+    @property
+    def units(self) -> list[Unit]:
+        return self.rows + self.columns + self.boxes
+    
+    def get_puzzle_state_matrix(self):
+        return [[cell.value for cell in row] for row in self.cells]
 
     @staticmethod
     def _parse(puzzle: Optional[str]) -> list[list[Optional[int]]]:
@@ -130,7 +175,6 @@ class Board:
             else:
                 raise ValueError(F"Unexpected value in puzzle: {char!r}")
         return [values[i * 9 : (i + 1) * 9] for i in range(9)]
-
 
     def _build_cells(self, puzzle: Optional[str]) -> list[list[Cell]]:
         cell_values = self._parse(puzzle)
@@ -158,7 +202,7 @@ class Board:
             boxes.append(Unit('box', b, members))
         return boxes
     
-    def _network_cell_peers(self) -> None:
+    def _build_cell_peers(self) -> None:
         for r in range(9):
             for c in range(9):
                 cell = self.cells[r][c]
@@ -173,10 +217,60 @@ class Board:
                 peers.discard(cell)
                 cell.peers = peers
 
+    def _build_strong_links(self):
+        self.strong_links = {d: set() for d in range(1,10)}
+        self.strong_adj = {d: {} for d in range(1,10)}
+        for unit in self.units:
+            for d in unit.missing_digits:
+                if unit.counts[d] == 2:
+                    pair = frozenset(unit.cells_with_candidates(d))
+                    self._add_strong_link(d, pair, unit)
+
     def _propogate_given_values(self) -> None:
         for row in self.cells:
             for cell in row:
                 if cell.is_given and cell.value is not None and cell.peers:
                     for peer in cell.peers:
                         peer.remove_candidates([cell.value])
-                        
+
+    def remove_candidates(self, cell: Cell, digits: list[int]) -> bool:
+        if not cell.remove_candidates(digits) == set(): 
+            return False
+        # Checking for strong links
+        for d in digits:
+            for unit in cell.units:
+                old = unit.counts[d]
+                new = old - 1
+                unit.counts[d] = new
+
+                if old == 2:
+                    # Strong link broken
+                    pair = frozenset(unit.cells_with_candidates(d) + [cell])
+                    self._remove_strong_link(d, pair, unit)
+
+                if new == 2:
+                    # New strong link created in this unit
+                    pair = frozenset(unit.cells_with_candidates(d))
+                    self._add_strong_link(d, pair, unit)
+
+                if new == 0 or new == 1:
+                    # Hidden single or contradiction - call assessment function
+                    pass
+        return True
+    
+    def _add_strong_link(self, d:int, pair:frozenset[Cell], unit: Unit):
+        self.strong_links[d].add(pair)
+        u, v = pair
+        self.strong_adj[d].setdefault(u, set()).add(u)
+        self.strong_adj[d].setdefault(v, set()).add(v)
+
+    def _remove_strong_link(self, d:int, pair:frozenset[Cell], unit: Unit):
+        a, b = pair
+        still_linked = any(
+            (u.contains_cell(a) and unit.contains_cell(b) and u.counts[d]==2) 
+            for u in self.units if u != unit
+        )
+        if not still_linked:
+            self.strong_links[d].discard(pair)
+            self.strong_adj[d][a].discard(b)
+            self.strong_adj[d][b].discard(a)

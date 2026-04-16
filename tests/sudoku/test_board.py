@@ -355,35 +355,35 @@ class TestBoard:
         board = Board(puzzle)
         assert all(cell.value is None for row in board.cells for cell in row)
 
-    # --- _network_cell_peers ---
+    # --- _build_cell_peers ---
 
-    def test_network_cell_peers_sets_units_on_every_cell(self):
+    def test_build_cell_peers_sets_units_on_every_cell(self):
         board = Board()
-        board._network_cell_peers()
+        board._build_cell_peers()
         for row in board.cells:
             for cell in row:
                 assert cell.units is not None
                 assert len(cell.units) == 3
 
-    def test_network_cell_peers_correct_unit_types(self):
+    def test_build_cell_peers_correct_unit_types(self):
         board = Board()
-        board._network_cell_peers()
+        board._build_cell_peers()
         cell = board.cells[0][0]
         assert cell.units is not None
         types = [u.type for u in cell.units]
         assert types == ['row', 'column', 'box']
 
-    def test_network_cell_peers_each_cell_has_20_peers(self):
+    def test_build_cell_peers_each_cell_has_20_peers(self):
         board = Board()
-        board._network_cell_peers()
+        board._build_cell_peers()
         for row in board.cells:
             for cell in row:
                 assert cell.peers is not None
                 assert len(cell.peers) == 20
 
-    def test_network_cell_peers_cell_not_in_own_peers(self):
+    def test_build_cell_peers_cell_not_in_own_peers(self):
         board = Board()
-        board._network_cell_peers()
+        board._build_cell_peers()
         for row in board.cells:
             for cell in row:
                 assert cell.peers is not None
@@ -393,7 +393,7 @@ class TestBoard:
 
     def test_propogate_given_values_removes_candidate_from_peers(self):
         board = Board("5" + "0" * 80)
-        board._network_cell_peers()
+        board._build_cell_peers()
         board._propogate_given_values()
         given_cell = board.cells[0][0]
         assert given_cell.peers is not None
@@ -402,7 +402,7 @@ class TestBoard:
 
     def test_propogate_given_values_does_not_affect_unrelated_cells(self):
         board = Board("5" + "0" * 80)
-        board._network_cell_peers()
+        board._build_cell_peers()
         board._propogate_given_values()
         # a cell in row 9, col 9 (box 9) shares no unit with R1C1
         unrelated = board.cells[8][8]
@@ -410,7 +410,7 @@ class TestBoard:
 
     def test_propogate_given_values_does_not_alter_given_cell_itself(self):
         board = Board("5" + "0" * 80)
-        board._network_cell_peers()
+        board._build_cell_peers()
         board._propogate_given_values()
         given_cell = board.cells[0][0]
         assert given_cell.value == 5
