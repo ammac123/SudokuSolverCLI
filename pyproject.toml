@@ -4,7 +4,14 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "easyocr>=1.7.2",
+    "opencv-python>=4.13.0.92",
+    "prompt-toolkit>=3.0.52",
+    "pytesseract>=0.3.13",
+    "questionary>=2.1.1",
+    "rich>=15.0.0",
+]
 
 [project.scripts]
 app = "src.main:main"
