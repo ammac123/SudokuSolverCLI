@@ -1,4 +1,6 @@
-# Sudoku Solver
+# Sudoku Solver cli
+
+![Sudoku Solve cli](./gallery/logo.png)
 
 A terminal-based Sudoku solver with image recognition support. Load a puzzle by typing it in, or point it at a photo and let it read the board for you.
 
