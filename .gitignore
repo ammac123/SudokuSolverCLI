@@ -12,5 +12,9 @@ wheels/
 # Virtual environments
 .venv
 
+# EasyOCR model weights (auto-downloaded on first run)
+*.pth
+
 # User settings
 settings.json
+test.sh

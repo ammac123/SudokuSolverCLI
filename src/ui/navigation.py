@@ -44,7 +44,8 @@ _LOGO = """
 
 EXIT_MESSAGE = Panel(
       Text("Goodbye 👋", justify="center"), 
-      border_style="grey93"
+      border_style="grey93",
+      padding=(6)
     )
 
 

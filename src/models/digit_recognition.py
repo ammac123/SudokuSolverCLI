@@ -9,7 +9,7 @@ _READER = easyocr.Reader(
     model_storage_directory="src/models",
     user_network_directory="src/models",
     verbose=False,
-    download_enabled=False,
+    download_enabled=True,
     cudnn_benchmark=True,
     )
 
