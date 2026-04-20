@@ -1,7 +1,6 @@
 from __future__ import annotations
 import time
 import threading
-from pathlib import Path
 from rich.live import Live
 from rich.spinner import Spinner
 from rich.align import Align
@@ -23,7 +22,6 @@ from src.algorithms.uniqueness_solver.complete_solver import (
 )
 from src.image_parsing.image_parser import (
     parse_sudoku_image,
-    show_cell_grid,
     stack_cells,
     _show,
 )
@@ -32,23 +30,39 @@ from rich.panel import Panel
 from rich.text import Text
 
 
-_LOGO = """
-███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗
-██╔════╝██║   ██║██╔══██╗██╔═══██╗██║ ██╔╝██║   ██║
-███████╗██║   ██║██║  ██║██║   ██║█████╔╝ ██║   ██║
-╚════██║██║   ██║██║  ██║██║   ██║██╔═██╗ ██║   ██║
-███████║╚██████╔╝██████╔╝╚██████╔╝██║  ██╗╚██████╔╝
-╚══════╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ 
-"""
+class _Logo:
+    """Renderable that centers the SUDOKU block, with CLI hanging to the right."""
+    _ROWS = [
+        ("███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗", ""),
+        ("██╔════╝██║   ██║██╔══██╗██╔═══██╗██║ ██╔╝██║   ██║", ""),
+        ("███████╗██║   ██║██║  ██║██║   ██║█████╔╝ ██║   ██║", ""),
+        ("╚════██║██║   ██║██║  ██║██║   ██║██╔═██╗ ██║   ██║", " █▀▀░█░░░▀█▀"),
+        ("███████║╚██████╔╝██████╔╝╚██████╔╝██║  ██╗╚██████╔╝", " █░░░█░░░░█░"),
+        ("╚══════╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝", "  ▀▀▀░▀▀▀░▀▀▀"),
+    ]
+    _SUDOKU_WIDTH = len(_ROWS[0][0])
+
+    def __init__(self, style: str = "bold orange4"):
+        self.style = style
+
+    def __rich_console__(self, console, options):
+        pad = max(0, (options.max_width - self._SUDOKU_WIDTH) // 2)
+        lines = [" " * pad + sudoku + cli for sudoku, cli in self._ROWS]
+        yield Text("\n" + "\n".join(lines) + "\n", style=self.style, no_wrap=True)
+
+
 
 
 EXIT_MESSAGE = Panel(
       Text("Goodbye 👋", justify="center"), 
-      border_style="grey93"
+      border_style="grey93",
+      padding=(6)
     )
 
 
 def loading():
+    from src.models.download_state import download_state
+
     done = threading.Event()
 
     def _load():
@@ -58,15 +72,30 @@ def loading():
     thread = threading.Thread(target=_load, daemon=True)
     thread.start()
 
-    logo = Text(_LOGO, style="bold orange4", justify="center")
+    logo = _Logo(style="bold orange4")
     spinner = Spinner("dots", style="orange1")
 
     with Live(console=console, refresh_per_second=12) as live:
         while not done.is_set():
-            status = Align(
-                Group(spinner, Align(Text(" Initialising…", style="dim"), align="center")),
-                align="center",
-            )
+            state = download_state.snapshot()
+            if state["active"]:
+                pct = state["pct"]
+                bar_width = 28
+                filled = int(bar_width * pct / 100)
+                bar = Text(
+                    f" {'█' * filled}{'░' * (bar_width - filled)}  {pct:.0f}%",
+                    style="orange1",
+                )
+                label = Text(
+                    f" Downloading model ({state['completed'] + 1}/2)…",
+                    style="dim",
+                )
+                status = Align(Group(Align(label, align="center"), Align(bar, align="center")), align="center")
+            else:
+                status = Align(
+                    Group(spinner, Align(Text(" Initialising…", style="dim"), align="center")),
+                    align="center",
+                )
             live.update(Panel(Group(logo, status), border_style="orange1", subtitle="[dim]v0.1.0[/dim]"))
             time.sleep(0.08)
 
@@ -74,7 +103,7 @@ def loading():
 
 
 def header():
-    logo = Text(_LOGO, style="bold orange1", justify="center")
+    logo = _Logo(style="bold orange1")
     console.print(Panel(logo, title_align="center", subtitle="[dim]v0.1.0[/dim]", border_style="orange1"))
 
 

@@ -1,7 +1,30 @@
+import logging
+import os
+from urllib.request import urlretrieve
+from zipfile import ZipFile
 import easyocr
+import easyocr.easyocr as _easyocr_module
 import numpy as np
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.utils.data")
+logging.getLogger("easyocr").setLevel(logging.ERROR)
+
+from src.models.download_state import download_state as _download_state
+
+def _tracked_download_and_unzip(url, filename, model_storage_directory, _verbose=True):
+    _download_state.start(filename)
+    zip_path = os.path.join(model_storage_directory, 'temp.zip')
+
+    def _hook(block_num, block_size, total_size):
+        _download_state.update(min(block_num * block_size, total_size), total_size)
+
+    urlretrieve(url, zip_path, reporthook=_hook)
+    with ZipFile(zip_path, 'r') as z:
+        z.extract(filename, model_storage_directory)
+    os.remove(zip_path)
+    _download_state.finish()
+
+_easyocr_module.download_and_unzip = _tracked_download_and_unzip
 
 _READER = easyocr.Reader(
     ['en'], 
@@ -9,7 +32,7 @@ _READER = easyocr.Reader(
     model_storage_directory="src/models",
     user_network_directory="src/models",
     verbose=False,
-    download_enabled=False,
+    download_enabled=True,
     cudnn_benchmark=True,
     )
 

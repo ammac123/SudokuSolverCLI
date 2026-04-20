@@ -1,8 +1,3 @@
-import os
-import questionary
-from time import sleep
-from rich.panel import Panel
-from rich.text import Text
 from src.ui.navigation import loading, main_menu, console
 
 

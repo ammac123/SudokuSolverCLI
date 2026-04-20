@@ -1,5 +1,7 @@
+from src.ui import ui
+
 def main():
-    print("Hello from sudoku!")
+    ui.main()
 
 
 if __name__ == "__main__":
