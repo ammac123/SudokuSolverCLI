@@ -1,7 +1,6 @@
 from __future__ import annotations
 import time
 import threading
-from pathlib import Path
 from rich.live import Live
 from rich.spinner import Spinner
 from rich.align import Align
@@ -23,7 +22,6 @@ from src.algorithms.uniqueness_solver.complete_solver import (
 )
 from src.image_parsing.image_parser import (
     parse_sudoku_image,
-    show_cell_grid,
     stack_cells,
     _show,
 )
