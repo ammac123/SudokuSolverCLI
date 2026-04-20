@@ -30,14 +30,27 @@ from rich.panel import Panel
 from rich.text import Text
 
 
-_LOGO = """
-███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗
-██╔════╝██║   ██║██╔══██╗██╔═══██╗██║ ██╔╝██║   ██║
-███████╗██║   ██║██║  ██║██║   ██║█████╔╝ ██║   ██║
-╚════██║██║   ██║██║  ██║██║   ██║██╔═██╗ ██║   ██║
-███████║╚██████╔╝██████╔╝╚██████╔╝██║  ██╗╚██████╔╝
-╚══════╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ 
-"""
+class _Logo:
+    """Renderable that centers the SUDOKU block, with CLI hanging to the right."""
+    _ROWS = [
+        ("███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗██╗   ██╗", ""),
+        ("██╔════╝██║   ██║██╔══██╗██╔═══██╗██║ ██╔╝██║   ██║", ""),
+        ("███████╗██║   ██║██║  ██║██║   ██║█████╔╝ ██║   ██║", ""),
+        ("╚════██║██║   ██║██║  ██║██║   ██║██╔═██╗ ██║   ██║", " █▀▀░█░░░▀█▀"),
+        ("███████║╚██████╔╝██████╔╝╚██████╔╝██║  ██╗╚██████╔╝", " █░░░█░░░░█░"),
+        ("╚══════╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝", "  ▀▀▀░▀▀▀░▀▀▀"),
+    ]
+    _SUDOKU_WIDTH = len(_ROWS[0][0])
+
+    def __init__(self, style: str = "bold orange4"):
+        self.style = style
+
+    def __rich_console__(self, console, options):
+        pad = max(0, (options.max_width - self._SUDOKU_WIDTH) // 2)
+        lines = [" " * pad + sudoku + cli for sudoku, cli in self._ROWS]
+        yield Text("\n" + "\n".join(lines) + "\n", style=self.style, no_wrap=True)
+
+
 
 
 EXIT_MESSAGE = Panel(
@@ -59,7 +72,7 @@ def loading():
     thread = threading.Thread(target=_load, daemon=True)
     thread.start()
 
-    logo = Text(_LOGO, style="bold orange4", justify="center")
+    logo = _Logo(style="bold orange4")
     spinner = Spinner("dots", style="orange1")
 
     with Live(console=console, refresh_per_second=12) as live:
@@ -90,7 +103,7 @@ def loading():
 
 
 def header():
-    logo = Text(_LOGO, style="bold orange1", justify="center")
+    logo = _Logo(style="bold orange1")
     console.print(Panel(logo, title_align="center", subtitle="[dim]v0.1.0[/dim]", border_style="orange1"))
 
 
