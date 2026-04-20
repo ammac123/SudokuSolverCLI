@@ -259,7 +259,7 @@ SOLVED = "\033[0;37m"
 DIM    = "\033[2;37m"
 RESET  = "\033[0m"
 
-def display_grid(grid, givens, status, elapsed_ms=None):
+def generate_display_grid_string(grid, givens, status, elapsed_ms=None):
     if status == SolutionStatus.NO_SOLUTION:
         grid = givens
     givens = list(map(lambda sub: list(map(lambda cell: cell or 0, sub)), givens))
@@ -291,15 +291,18 @@ def display_grid(grid, givens, status, elapsed_ms=None):
     total_solved = 81 - total_givens if (status != SolutionStatus.NO_SOLUTION) else "No solution"
     lines += [
         "",
-        f"{DIM}Givens :{RESET} {GIVEN}{total_givens}{RESET}",
-        f"{DIM}Solved :{RESET} {SOLVED}{total_solved}{RESET}",
-        *([ f"{DIM}Time   :{RESET} {elapsed_ms:.3f} ms"] 
+        f"{DIM}{"Givens :"}{RESET}" + f" {GIVEN}{str(total_givens)}{RESET}",
+        f"{DIM}{"Solved :"}{RESET}" + f" {SOLVED}{str(total_solved).ljust(12)}{RESET}",
+        *([ f"{DIM}{"Time   :"}{RESET}" + f" {SOLVED}" + f"{elapsed_ms:.3f} ms".ljust(12) + f"{RESET}"] 
           if elapsed_ms is not None and status != SolutionStatus.NO_SOLUTION
           else []
           ),
         "",
     ]
+    return lines
 
+def display_grid(grid, givens, status, elapsed_ms=None):
+    lines = generate_display_grid_string(grid, givens, status, elapsed_ms)
     print(textwrap.indent("\n".join(lines), "\t"))
 
 
@@ -321,3 +324,5 @@ def main():
 
 if __name__=="__main__":
     main()
+
+# 000000000000003085001020000000507000004000100090000000500000073002010000000040009
