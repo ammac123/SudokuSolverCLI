@@ -50,6 +50,8 @@ EXIT_MESSAGE = Panel(
 
 
 def loading():
+    from src.models.download_state import download_state
+
     done = threading.Event()
 
     def _load():
@@ -64,10 +66,25 @@ def loading():
 
     with Live(console=console, refresh_per_second=12) as live:
         while not done.is_set():
-            status = Align(
-                Group(spinner, Align(Text(" Initialising…", style="dim"), align="center")),
-                align="center",
-            )
+            state = download_state.snapshot()
+            if state["active"]:
+                pct = state["pct"]
+                bar_width = 28
+                filled = int(bar_width * pct / 100)
+                bar = Text(
+                    f" {'█' * filled}{'░' * (bar_width - filled)}  {pct:.0f}%",
+                    style="orange1",
+                )
+                label = Text(
+                    f" Downloading model ({state['completed'] + 1}/2)…",
+                    style="dim",
+                )
+                status = Align(Group(Align(label, align="center"), Align(bar, align="center")), align="center")
+            else:
+                status = Align(
+                    Group(spinner, Align(Text(" Initialising…", style="dim"), align="center")),
+                    align="center",
+                )
             live.update(Panel(Group(logo, status), border_style="orange1", subtitle="[dim]v0.1.0[/dim]"))
             time.sleep(0.08)
 
